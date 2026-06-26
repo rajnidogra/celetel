@@ -1,2 +1,2 @@
-# celetel.git
+# celetel
 CPaas International panel
