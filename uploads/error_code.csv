@@ -1,0 +1,4 @@
+Original Code,Replaced Code,Replaced Status,Description
+200,201,DELIVRD,For SMS Api
+400,401,FAILED,For HTTP User
+500,501,REJECTED,For SMPP User

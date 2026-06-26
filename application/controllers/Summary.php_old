@@ -1,0 +1,792 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+class Summary extends CI_Controller {
+
+	function __construct() {
+        parent::__construct();
+        // is_login();
+        $this->load->model('user');
+        $this->load->model('summarys');
+    }
+
+    function index(){
+    	$data =  array();
+        $user_id=$this->session->userdata("userId");
+		$this->load->view('summary',$data);
+    }
+
+     function getCampaignByChain(){
+        $user_id= $this->input->post('user_id');
+
+        $getData = $this->summarys->getCampaignByChain($user_id);
+
+        echo '<option value="">Select Campaign</option>';
+        foreach ($getData as $value) {
+            echo '<option value="'.$value["campaign_name"].'">'.$value["campaign_name"].'</option>';
+        }
+    }
+    
+    function getSummaryTable(){
+    	$draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        $user_id=$this->session->userdata("userId");
+        $getusers=$this->summarys->getSmppUserDetail();
+        
+        $mem = array();  
+        $i=1;
+        foreach($getusers->result() as $r) {  
+        $mem[] = array(
+            $i,
+            $r->system_id ,
+            $r->throughput,
+            $r->default_smsc,
+            $r->max_binds,
+            $r->connect_allow_ip,
+            $r->credit,
+            $r->dlt,
+            $r->coordinator,
+            $edit.$delete.$update.$unbind
+        );     
+        
+        $i++;
+        }
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+        echo json_encode($output);
+    }
+
+    function errorreporting(){
+    	$data =  array();
+        $user_id=$this->session->userdata("userId");
+        $getErrordata = $this->summarys->getErrorListByGroup();
+        $ErrorList = '<option selected="selected" value="">Select Error</option>';
+        foreach($getErrordata as $r) {   
+            $ErrorList .=  '<option value="'.$r["error"].'">'.$r["error"].'</option>';
+        }
+        $data['errorList'] = $ErrorList;
+
+        $userChain = $this->session->userdata('userChain');
+
+        $getAccountList = $this->summarys->getAccountByChain($userChain);
+        $accountList = '<option selected="selected" value="">Select Account</option>';
+        foreach($getAccountList as $r) {   
+            $accountList .=  '<option value="'.$r["system_id"].'">'.$r["system_id"].'</option>';
+        }
+        $data['accountList'] = $accountList;
+		$this->load->view('errorReporting',$data);
+    }
+
+    function errorReportingData(){
+    	$draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        $user_id=$this->session->userdata("userId");
+
+		if(!empty($this->input->post('todate'))){
+			$todate = date('Y-m-d',strtotime($this->input->post('todate')));
+		}else{
+			$todate = date('Y-m-d');
+		}
+
+		if(!empty($this->input->post('fromdate'))){
+			$fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+		}else{
+			$fromdate = date('Y-m-d');
+		}
+
+		$account = $this->input->post('account');
+		$errorcode = $this->input->post('errorcode');
+		$systemIds = "";
+
+        $getusers = $this->summarys->getSummaryErrorReporting($systemIds,$user_id,$account,$errorcode,$todate,$fromdate);
+        
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+            $mem[] = array(
+                ($r->submit_date)?date("d-m-Y",strtotime($r->submit_date)):"",
+                $r->account,
+                $r->error,
+                $r->sumcount
+            );  
+
+        }     
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+        echo json_encode($output);
+    }
+
+    function headerreporting(){
+    	$data =  array();
+        $user_id=$this->session->userdata("userId");
+        $HeaderResult = $this->summarys->getHeadersDetail();
+
+        $getHeadersdata = '<option selected="selected" value="">Select Header</option>';
+        foreach($HeaderResult as $r) {   
+            $getHeadersdata .=  '<option value="'.$r["header"].'">'.$r["header"].'</option>';
+        }
+
+        $userChain = $this->session->userdata('userChain');
+
+        $getAccountList = $this->summarys->getAccountByChain($userChain);
+        $accountList = '<option selected="selected" value="">Select Account</option>';
+        foreach($getAccountList as $r) {   
+            $accountList .=  '<option value="'.$r["system_id"].'">'.$r["system_id"].'</option>';
+        }
+        $data['accountList'] = $accountList;
+        $data['headercode'] = $getHeadersdata;
+		$this->load->view('headerReporting',$data);
+    }
+
+    function headerReportingData(){
+    	$draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        $user_id=$this->session->userdata("userId");
+
+		if(!empty($this->input->post('todate'))){
+			$todate = date('Y-m-d',strtotime($this->input->post('todate')));
+		}else{
+			$todate = date('Y-m-d');
+		}
+
+		if(!empty($this->input->post('fromdate'))){
+			$fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+		}else{
+			$fromdate = date('Y-m-d');
+		}
+
+		$account = $this->input->post('account');
+		$headercode = $this->input->post('headercode');
+		$systemIds = "";
+
+        $getusers = $this->summarys->getSummaryHeaderReporting($systemIds,$user_id,$account,$headercode,$todate,$fromdate);
+        
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+            $perc =   ($r->status_delivered *100)/$r->submit_count;
+            $mem[] = array(
+                date("d-m-Y",strtotime($r->submit_date)),
+                $r->account,
+                $r->header,
+                $perc,
+                $r->submit_count,
+                $r->status_delivered,
+                $r->status_failed,
+                $r->status_pending,
+                $r->status_nack
+            );  
+
+        }     
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+        echo json_encode($output);
+    }
+
+    function smscReporting()
+    {
+        $data =  array();
+        $user_id=$this->session->userdata("userId");
+        $userChain = $this->session->userdata('userChain');
+        $getAccountList = $this->summarys->getAccountByChain($userChain);
+        $accountList = '<option selected="selected" value="">Select Account</option>';
+        foreach($getAccountList as $r) {   
+            $accountList .=  '<option value="'.$r["system_id"].'">'.$r["system_id"].'</option>';
+        }
+        $data['accountList'] = $accountList;
+        
+        $resultSmsc = $this->summarys->getSMSCCodeDetail();
+
+        $getSmscdata = '<option selected="selected" value="">Select SMSC</option>';
+        foreach($resultSmsc as $r) {   
+            $getSmscdata .=  '<option value="'.$r["smsc"].'">'.$r["smsc"].'</option>';
+        }
+        $data['smscData'] = $getSmscdata;
+
+        $this->load->view('smscReporting',$data);
+    }
+
+    function smscSummaryReporting()
+    {
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length")); 
+        
+        if(!empty($this->input->post('todate'))){
+            $todate = date('Y-m-d',strtotime($this->input->post('todate')));
+        }else{
+            $todate = date('Y-m-d');
+        }
+
+        if(!empty($this->input->post('fromdate'))){
+            $fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+        }else{
+            $fromdate = date('Y-m-d');
+        }
+        
+        $account = $this->input->post('account');
+        $smsccode = $this->input->post('smsccode');
+        
+
+        $user_id=$this->session->userdata("userId");
+
+        $systemIds = "";
+        $getusers = $this->summarys->getSummarySMSCReporting($systemIds,$user_id,$account,$smsccode,$todate,$fromdate);
+
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+            $perc =   ($r->status_delivered *100)/$r->submit_count;
+            $mem[] = array(
+                date("d-m-Y",strtotime($r->submit_date)),
+                $r->account,
+                $r->smsc,
+                $perc,
+                $r->status_delivered+$r->status_failed+$r->status_pending+$r->status_nack,
+                $r->status_delivered,
+                $r->status_failed,
+                $r->status_pending,
+                $r->status_nack
+            ); 
+
+        }
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+
+        echo json_encode($output);
+        exit(); 
+    }
+
+    function campaignTracking(){
+        $data =  array();
+        $user_id=$this->session->userdata("userId");
+
+        $userChain = $this->session->userdata('userChain');
+
+        $data["accountList"] = $this->summarys->getAccountByChain($userChain);
+        // $accountList = '<option selected="selected" value="">Select Account</option>';
+        // foreach($getAccountList as $r) {   
+        //     $accountList .=  '<option value="'.$r["system_id"].'">'.$r["system_id"].'</option>';
+        // }
+        // $data['accountList'] = $accountList;
+
+        // $getaccount=$this->templateregistration_model->getAccountList($user_id);
+        // $data["accountList"] = $getaccount;
+        $this->load->view('campaignTracking',$data);
+    }
+
+    function getCampaignByAccount(){
+        if($this->input->post('account')){
+            $account= $this->input->post('account');
+        }else{
+            $account=$this->session->userdata("userChain");
+        }
+        
+
+        $getData = $this->summarys->getCampaignByAccount($account);
+
+        echo '<option value="">Select Campaign</option>';
+        foreach ($getData as $value) {
+            echo '<option value="'.$value["campaign"].'">'.$value["campaign"].'</option>';
+        }
+    }
+
+    function get_campaign_tracking_data()
+    {
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+        ini_set('memory_limit', -1);
+        $user_id=$this->session->userdata("userId");
+
+        $account= $this->input->post('account');
+        $campaign= $this->input->post('campaign');
+       
+        // $getusers=$this->summarys->getCampaignTrackingData($campaign);
+        $getusers=$this->summarys->getSummaryTrackingDetails($campaign,$account);
+        
+        $mem = array();  
+        $i = 1;
+        foreach($getusers->result() as $r) {   
+            $clicks = '<a href="'.base_url('summary/campaignTracking').'?account='.$r->account.'&campaign='.$r->campaign.'&campaign_date='.$r->campaign_date.'">'.$r->clicks.'</a>';
+            
+            //  $mem[] = array(
+            //     $i,
+            //     $r->campaign_name,
+            //     $r->contact,
+            //     $r->keyword,
+            //     $r->url,
+            //     $r->timestamp,
+            //     $r->clicks,
+            // );
+            $mem[] = array(
+                $i,
+                $r->account,
+                $r->campaign,
+                $r->campaign_date,
+                $clicks,    
+                ); 
+             $i++;
+        }
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+
+        echo json_encode($output);
+        exit(); 
+    }
+
+    function trackingSummary()
+    {
+        $data =  array();
+        $user_id=$this->session->userdata("userId");
+        $userChain = $this->session->userdata('userChain');
+
+        $data["accountList"] = $this->summarys->getAccountByChain($userChain);
+        $this->load->view('summaryTracking',$data);
+    }
+
+    function get_summary_tracking_data()
+    {
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+        ini_set('memory_limit', -1);
+        $user_id=$this->session->userdata("userId");
+
+        $account= $this->input->post('account');
+        $campaign= $this->input->post('campaign');
+        $getusers=$this->summarys->getSummaryTrackingData($campaign);
+        // print_r($getusers);die;
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+           $mem[] = array(
+                $r->id,
+                $r->location,
+                $r->clickdate,
+                $r->clicks,
+            );     
+
+        }
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+
+        echo json_encode($output);
+        exit(); 
+    }
+
+    function userSummary()
+    {
+        $data =  array();
+        $userChain=$this->session->userdata("userChain");
+        $userType = array(2);
+        $this->summarys->deleteBlankDataBySummary();
+        $data["userType"]=$this->summarys->getUsersByParentId($userChain,$userType);
+        $this->load->view('userSummary',$data);
+    }
+
+    function sellerSummary()
+    {
+        $data =  array();
+        $userChain=$this->session->userdata("userChain");
+        $userType = array(4);
+        $data["userType"]=$this->summarys->getUsersByParentId($userChain,$userType);
+        $this->load->view('sellerSummary',$data);
+    }
+
+    function resellerSummary()
+    {
+        $data =  array();
+        $userChain=$this->session->userdata("userChain");
+        $userType = array(3);
+        $data["userType"]=$this->summarys->getUsersByParentId($userChain,$userType);
+        $this->load->view('resellerSummary',$data);
+    }
+
+    function get_summary_user_data()
+    {
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        $user_id=$this->session->userdata("userId");
+        $user_chain=$this->session->userdata("userChain");
+        $filter = "";
+
+        if(!empty($this->input->post('todate'))){
+            $todate = date('Y-m-d',strtotime($this->input->post('todate')));
+        }else{
+            $todate = date('Y-m-d');
+        }
+
+        if(!empty($this->input->post('fromdate'))){
+            $fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+        }else{
+            $fromdate = date('Y-m-d');
+        }
+
+        $filter .= " and submit_date between '$fromdate' and '$todate'";
+
+        if($this->input->post('account')){
+            $filter .= " and account = '".$this->input->post('account')."'";
+        }
+
+        if($this->input->post('user_id')){
+            $filter .= " and user like '".$this->input->post('user_id')."%'";
+        }else{
+            $filter .= " and user like '".$user_chain."%'";
+        }
+
+        $getusers=$this->summarys->getSmSSummary($filter);
+        // print_r($getusers->num_rows());die;
+        $mem = array();  
+        foreach($getusers->result() as $r) { 
+            $perc =   ($r->status_delivered *100)/$r->submit_count;
+           $mem[] = array(
+                // date('Y-m-d',strtolower($r->submit_date)),
+                $r->submit_date,
+                $r->username,
+                //s$r->smsc,
+                $perc,
+                $r->submit_count,
+                $r->dlr_count,
+                $r->status_delivered,
+                $r->status_failed,
+                $r->status_pending,
+                $r->status_nack,
+            );     
+
+        }
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+
+        echo json_encode($output);
+        exit(); 
+    }
+
+    function latencySummary(){
+        $data =  array();
+        $user_id=$this->session->userdata("userId");
+        $HeaderResult = $this->summarys->getLatencysDetail();
+
+        $getHeadersdata = '<option selected="selected" value="">Select Latency</option>';
+        foreach($HeaderResult as $r) {   
+            $getHeadersdata .=  '<option value="'.$r["latency"].'">'.$r["latency"].'</option>';
+        }
+
+        $userChain = $this->session->userdata('userChain');
+
+        $getAccountList = $this->summarys->getAccountByChain($userChain);
+        $accountList = '<option selected="selected" value="">Select Account</option>';
+        foreach($getAccountList as $r) {   
+            $accountList .=  '<option value="'.$r["system_id"].'">'.$r["system_id"].'</option>';
+        }
+        $data['accountList'] = $accountList;
+        $data['latencycode'] = $getHeadersdata;
+        $this->load->view('latencyReporting',$data);
+    }
+
+    function latancyReportingData(){
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        $user_id=$this->session->userdata("userId");
+
+        if(!empty($this->input->post('todate'))){
+            $todate = date('Y-m-d',strtotime($this->input->post('todate')));
+        }else{
+            $todate = date('Y-m-d');
+        }
+
+        if(!empty($this->input->post('fromdate'))){
+            $fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+        }else{
+            $fromdate = date('Y-m-d');
+        }
+
+        $account = $this->input->post('account');
+        $latency = $this->input->post('latency');
+        $systemIds = "";
+
+        $getusers = $this->summarys->getSummaryLatencyReporting($systemIds,$user_id,$account,$latency,$todate,$fromdate);
+        
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+            $perc =   ($r->status_delivered *100)/$r->submit_count;
+            $mem[] = array(
+                date("d-m-Y",strtotime($r->submit_date)),
+                $r->account,
+                $r->latency,
+                $perc,
+                $r->submit_count,
+                $r->status_delivered,
+                $r->status_failed,
+                $r->status_pending,
+                $r->status_nack
+            );  
+
+        }     
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+        echo json_encode($output);
+    }
+
+    function channelSummary(){
+        $data =  array();
+        $user_id=$this->session->userdata("userId");
+        $HeaderResult = $this->summarys->getChannelDetail();
+
+        $getHeadersdata = '<option selected="selected" value="">Select Channel</option>';
+        foreach($HeaderResult as $r) {   
+            $getHeadersdata .=  '<option value="'.$r["channel"].'">'.$r["channel"].'</option>';
+        }
+
+        $userChain = $this->session->userdata('userChain');
+
+        $getAccountList = $this->summarys->getAccountByChain($userChain);
+        $accountList = '<option selected="selected" value="">Select Account</option>';
+        foreach($getAccountList as $r) {   
+            $accountList .=  '<option value="'.$r["system_id"].'">'.$r["system_id"].'</option>';
+        }
+        $data['accountList'] = $accountList;
+        $data['channel'] = $getHeadersdata;
+        $this->load->view('channelReporting',$data);
+    }
+
+    function channelReportingData(){
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        $user_id=$this->session->userdata("userId");
+
+        if(!empty($this->input->post('todate'))){
+            $todate = date('Y-m-d',strtotime($this->input->post('todate')));
+        }else{
+            $todate = date('Y-m-d');
+        }
+
+        if(!empty($this->input->post('fromdate'))){
+            $fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+        }else{
+            $fromdate = date('Y-m-d');
+        }
+
+        $account = $this->input->post('account');
+        $channel = $this->input->post('channel');
+        $systemIds = "";
+
+        $getusers = $this->summarys->getSummaryChannelReporting($systemIds,$user_id,$account,$channel,$todate,$fromdate);
+        
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+            $perc =   ($r->status_delivered *100)/$r->submit_count;
+            $mem[] = array(
+                date("d-m-Y",strtotime($r->submit_date)),
+                $r->account,
+                $r->channel,
+                $perc,
+                $r->submit_count,
+                $r->status_delivered,
+                $r->status_failed,
+                $r->status_pending,
+                $r->status_nack
+            );  
+
+        }     
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+        echo json_encode($output);
+    }
+
+
+    function trafficSummary(){
+        $data =  array();
+        $user_id=$this->session->userdata("userId");
+        $HeaderResult = $this->summarys->getTrafficDetail();
+
+        $getHeadersdata = '<option selected="selected" value="">Select Traffic</option>';
+        foreach($HeaderResult as $r) {   
+            $getHeadersdata .=  '<option value="'.$r["sender_type"].'">'.$r["sender_type"].'</option>';
+        }
+
+        $userChain = $this->session->userdata('userChain');
+
+        $getAccountList = $this->summarys->getAccountByChain($userChain);
+        $accountList = '<option selected="selected" value="">Select Account</option>';
+        foreach($getAccountList as $r) {   
+            $accountList .=  '<option value="'.$r["user"].'">'.$r["system_id"].'</option>';
+        }
+        $data['accountList'] = $accountList;
+        $data['traffic'] = $getHeadersdata;
+        $this->load->view('trafficReporting',$data);
+    }
+
+    function trafficReportingData(){
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        $user_id=$this->session->userdata("userId");
+
+        if(!empty($this->input->post('todate'))){
+            $todate = date('Y-m-d',strtotime($this->input->post('todate')));
+        }else{
+            $todate = date('Y-m-d');
+        }
+
+        if(!empty($this->input->post('fromdate'))){
+            $fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+        }else{
+            $fromdate = date('Y-m-d');
+        }
+
+        if($this->input->post('account')){
+            $account= $this->input->post('account');
+        }else{
+            $account=$this->session->userdata("userChain");
+        }
+        
+
+        // $account = $this->input->post('account');
+        $traffic = $this->input->post('traffic');
+        $systemIds = "";
+
+        $getusers = $this->summarys->getSummaryTrafficReporting($systemIds,$user_id,$account,$traffic,$todate,$fromdate);
+        
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+            $perc =   ($r->status_delivered *100)/$r->submit_count;
+            $mem[] = array(
+                date("d-m-Y",strtotime($r->submit_date)),
+                $r->account,
+                $r->sender_type,
+                $perc,
+                $r->submit_count,
+                $r->status_delivered,
+                $r->status_failed,
+                $r->status_pending,
+                $r->status_nack
+            );  
+
+        }     
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+        echo json_encode($output);
+    }
+
+    function campaignSummary(){
+
+        $data =  array();
+        $user_id=$this->session->userdata("userId");
+
+        $userChain = $this->session->userdata('userChain');
+
+        $data["accountList"] = $this->summarys->getAccountByChain($userChain);
+       
+        $this->load->view('campaignSummary',$data);
+    }
+
+    function campaign_summary_data(){
+        $draw = intval($this->input->get("draw"));
+        $start = intval($this->input->get("start"));
+        $length = intval($this->input->get("length"));   
+
+        if(!empty($this->input->post('todate'))){
+            $todate = date('Y-m-d',strtotime($this->input->post('todate')));
+        }else{
+            $todate = date('Y-m-d');
+        }
+
+        if(!empty($this->input->post('fromdate'))){
+            $fromdate = date('Y-m-d',strtotime($this->input->post('fromdate')));
+        }else{
+            $fromdate = date('Y-m-d');
+        }
+
+        // $user_id = $this->input->post('user_id');
+        $user_id = $this->session->userdata('userChain');
+        $campaign = $this->input->post('campaign');
+
+        $getusers = $this->summarys->getcampaignSummary($user_id,$campaign,$todate,$fromdate);
+        
+        $mem = array();  
+        foreach($getusers->result() as $r) {   
+            $perc =   ($r->status_delivered *100)/$r->submit_count;
+            $mem[] = array(
+                date("d-m-Y",strtotime($r->submit_date)),
+                $r->account,
+                $r->campaign,
+                $perc,
+                $r->submit_count,
+                $r->status_delivered,
+                $r->status_failed,
+                $r->status_pending,
+                $r->status_nack,
+            );  
+
+        }     
+
+        $output = array(
+            "draw" => $draw,
+            "recordsTotal" => $getusers->num_rows(),
+            "recordsFiltered" => $getusers->num_rows(),
+            "data" => $mem
+        );
+        echo json_encode($output);
+    }
+
+    
+
+}
